@@ -210,7 +210,7 @@ fun LazyRowExample(modifier: Modifier = Modifier) {
                             .clickable {
                                 Toast.makeText(
                                     context,
-                                    "這是:陳韋宏",
+                                    "這是 \${animal.name}",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
