@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.DrawableRes
+import androidx.annotation.RawRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 
 import androidx.compose.runtime.getValue
 
@@ -47,6 +49,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 
 import tw.edu.pu.csim.tcyang.basicui.ui.theme.BasicUITheme
 
@@ -73,6 +79,7 @@ fun Main( modifier: Modifier = Modifier) {
         ColumnExample(modifier)
         TextFieldExample(modifier)
         LazyRowExample(modifier,)
+        SimpleVideoPlayer(R.raw.love)
     }
 }
 
@@ -227,4 +234,35 @@ fun LazyRowExample(modifier: Modifier = Modifier) {
             }
         }
     }
+}
+@Composable
+fun SimpleVideoPlayer(
+    @RawRes videoRes: Int
+) {
+    val context = LocalContext.current
+
+    // 建立並記住 ExoPlayer 實體，設定影片路徑與自動播放
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            val uri = "android.resource://${context.packageName}/$videoRes"
+            setMediaItem(MediaItem.fromUri(uri))
+            prepare()
+            playWhenReady = true // 載入完成自動播放
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release() // 💡 釋放播放器資源
+        }
+    }
+    AndroidView(
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                player = exoPlayer
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+    )
 }
