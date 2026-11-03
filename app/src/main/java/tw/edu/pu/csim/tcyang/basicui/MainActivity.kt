@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.runtime.getValue
 
@@ -79,10 +81,20 @@ fun Main( modifier: Modifier = Modifier) {
         ColumnExample(modifier)
         TextFieldExample(modifier)
         LazyRowExample(modifier,)
-        SimpleVideoPlayer(R.raw.love)
+        SimpleVideoPlayer()
     }
 }
+@Composable
+fun SimpleVideoPlayer(
+    @RawRes videoRes: Int // 確保這裡有接收 videoRes 參數
+) {
+    val context = LocalContext.current
 
+    // 建立並記住目前的影片狀態與 ExoPlayer...
+    var currentVideoRes by remember { mutableStateOf(videoRes) }
+
+    // ...其餘程式碼保持不變
+}
 @Composable
 fun LazyColumnExample( modifier: Modifier = Modifier) {
     Box {
@@ -217,7 +229,7 @@ fun LazyRowExample(modifier: Modifier = Modifier) {
                             .clickable {
                                 Toast.makeText(
                                     context,
-                                    "這是 \${animal.name}",
+                                    "這是 ${animal.name}",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -236,33 +248,67 @@ fun LazyRowExample(modifier: Modifier = Modifier) {
     }
 }
 @Composable
-fun SimpleVideoPlayer(
-    @RawRes videoRes: Int
-) {
+fun SimpleVideoPlayer() {
     val context = LocalContext.current
 
-    // 建立並記住 ExoPlayer 實體，設定影片路徑與自動播放
+    // 1. 使用 remember 記錄當前的影片資源 ID，預設為 love.mp4 (R.raw.love)
+    // 請依您的實際 raw 資源名稱調整 (例如 R.raw.love 與 R.raw.handpan)
+    var currentVideoRes by remember { mutableStateOf(R.raw.love) }
+
+    // 追蹤按鈕文字與下一部要切換的影片
+    val isLovePlaying = (currentVideoRes == R.raw.love)
+    val buttonText = if (isLovePlaying) "切換至手碟影片" else "切換至Love影片"
+
+    // 2. 建立並記住 ExoPlayer 實體
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
-            val uri = "android.resource://${context.packageName}/$videoRes"
-            setMediaItem(MediaItem.fromUri(uri))
-            prepare()
             playWhenReady = true // 載入完成自動播放
         }
     }
+
+    // 3. 當 currentVideoRes 改變時，更新 ExoPlayer 的 MediaItem 並重新準備播放
+    LaunchedEffect(currentVideoRes) {
+        val uri = "android.resource://${context.packageName}/$currentVideoRes"
+        exoPlayer.setMediaItem(MediaItem.fromUri(uri))
+        exoPlayer.prepare()
+    }
+
+    // 4. 離開畫面時釋放播放器資源
     DisposableEffect(Unit) {
         onDispose {
-            exoPlayer.release() // 💡 釋放播放器資源
+            exoPlayer.release()
         }
     }
-    AndroidView(
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                player = exoPlayer
+
+    // 5. UI 畫面佈局：包含影片播放器與切換按鈕
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // 影片檢視區塊
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 切換影片按鈕
+        Button(onClick = {
+            // 點擊按鈕後進行切換
+            currentVideoRes = if (isLovePlaying) {
+                R.raw.handpan
+            } else {
+                R.raw.love
             }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-    )
+        }) {
+            Text(text = buttonText)
+        }
+    }
 }
